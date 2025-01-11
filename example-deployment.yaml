@@ -1,0 +1,66 @@
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mediscout-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mediscout-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mediscout-deployment
+  labels:
+    app: mediscout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mediscout
+  template:
+    metadata:
+      labels:
+        app: mediscout
+    spec:
+      containers:
+      - name: mediscout
+        image: <tagged image>
+        args: ["start"]
+        volumeMounts:
+        - name: mediscout-pv-storage
+          mountPath: /app/db
+        env:
+        - name: MEDICOVER_USER
+          value: ""
+        - name: MEDICOVER_PASS
+          value: ""
+        - name: NOTIFIERS_TELEGRAM_CHAT_ID
+          value: ""
+        - name: NOTIFIERS_TELEGRAM_TOKEN
+          value: ""
+        - name: REFRESH_TIME_S
+          value: "300"
+      volumes:
+      - name: mediscout-pv-storage
+        persistentVolumeClaim:
+          claimName: mediscout-pv-claim
