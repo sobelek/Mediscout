@@ -5,6 +5,7 @@ import hashlib
 import os
 import random
 import string
+import time
 import uuid
 import argparse
 from time import sleep
@@ -51,11 +52,13 @@ class Authenticator:
 
         login_url = "https://login-online24.medicover.pl"
         oidc_redirect = "https://online24.medicover.pl/signin-oidc"
+        epoch_time = int(time.time()) * 1000
+
         auth_params = (
             f"?client_id=web&redirect_uri={oidc_redirect}&response_type=code"
             f"&scope=openid+offline_access+profile&state={state}&code_challenge={code_challenge}"
-            "&code_challenge_method=S256&response_mode=query&ui_locales=pl&app_version=3.2.0.482"
-            "&previous_app_version=3.2.0.482&device_id={device_id}&device_name=Chrome"
+            f"&code_challenge_method=S256&response_mode=query&ui_locales=pl&app_version=3.4.0-beta.1.0"
+            f"&previous_app_version=3.4.0-beta.1.0&device_id={device_id}&device_name=Chrome&ts={epoch_time}"
         )
 
         # Step 1: Initialize login
@@ -65,7 +68,11 @@ class Authenticator:
         # Step 2: Extract CSRF token
         response = self.session.get(next_url, headers=self.headers, allow_redirects=False)
         soup = BeautifulSoup(response.content, "html.parser")
-        csrf_token = soup.find("input", {"name": "__RequestVerificationToken"}).get("value")
+        csrf_input = soup.find("input", {"name": "__RequestVerificationToken"})
+        if csrf_input:
+            csrf_token = csrf_input.get("value")
+        else:
+            raise ValueError("CSRF token not found in the login page.")
 
         # Step 3: Submit login form
         login_data = {
